@@ -238,6 +238,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isQuotaError(error: any): boolean {
+  const statusText = typeof error?.status === 'string' ? error.status : String(error?.status ?? '');
+  const messageText = typeof error?.message === 'string' ? error.message : String(error?.message ?? '');
+  return statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.toLowerCase().includes('quota');
+}
+
 async function startServer() {
   await syncLocalDocumentsToDb();
 
@@ -379,10 +385,7 @@ ${contextText}
           return res.json({ response: response.text });
         } catch (error: any) {
           lastError = error;
-          const statusText = error?.status || '';
-          const messageText = typeof error?.message === 'string' ? error.message : '';
-          const isQuotaError = statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.includes('quota');
-          if (!isQuotaError) {
+          if (!isQuotaError(error)) {
             throw error;
           }
 
@@ -404,10 +407,7 @@ ${contextText}
       });
 
       const upstreamMessage = error?.message || '未知錯誤';
-      const statusText = error?.status || '';
-      const messageText = typeof error?.message === 'string' ? error.message : '';
-      const isQuotaError = statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.includes('quota');
-      if (isQuotaError) {
+      if (isQuotaError(error)) {
         return res.status(429).json({ error: `Gemini 額度不足或暫時超限，請稍後重試，或在 Google AI Studio 提升配額/改用可用模型。上游訊息: ${upstreamMessage}` });
       }
       res.status(500).json({ error: `Gemini API 錯誤: ${upstreamMessage}` });
