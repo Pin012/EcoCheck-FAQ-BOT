@@ -1,0 +1,6 @@
+{
+  "name": "EcoCheck FAQ RAG System",
+  "description": "生態檢核 FAQ系統，可上傳文件作為RAG回答依據",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
