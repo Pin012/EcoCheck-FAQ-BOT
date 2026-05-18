@@ -51,6 +51,8 @@ function saveDb(data: DocumentRecord[]) {
 // Gemini Initialization
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const PRIMARY_MODEL = 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-2.5-pro';
 
 // Multer Setup
 const storage = multer.diskStorage({
@@ -219,6 +221,23 @@ ${item.text}
   return context || 'No relevant context found in uploaded documents.';
 }
 
+function parseRetryDelayMs(error: any): number | null {
+  const detailList = Array.isArray(error?.details) ? error.details : [];
+  const retryInfo = detailList.find((d: any) => d?.['@type']?.includes('RetryInfo'));
+  const retryDelay = retryInfo?.retryDelay;
+  if (typeof retryDelay === 'string') {
+    const seconds = Number.parseFloat(retryDelay.replace('s', ''));
+    if (!Number.isNaN(seconds) && seconds > 0) {
+      return Math.ceil(seconds * 1000);
+    }
+  }
+  return null;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function startServer() {
   await syncLocalDocumentsToDb();
 
@@ -343,16 +362,39 @@ ${contextText}
     `;
 
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: normalizedMessages,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.2, // Low temperature for factual RAG responses
-        }
-      });
+      const modelCandidates = [PRIMARY_MODEL, FALLBACK_MODEL];
+      let lastError: any = null;
 
-      res.json({ response: response.text });
+      for (const modelName of modelCandidates) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: normalizedMessages,
+            config: {
+              systemInstruction: systemInstruction,
+              temperature: 0.2, // Low temperature for factual RAG responses
+            }
+          });
+
+          return res.json({ response: response.text });
+        } catch (error: any) {
+          lastError = error;
+          const statusText = error?.status || '';
+          const messageText = typeof error?.message === 'string' ? error.message : '';
+          const isQuotaError = statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.includes('quota');
+          if (!isQuotaError) {
+            throw error;
+          }
+
+          const retryDelayMs = parseRetryDelayMs(error);
+          if (retryDelayMs && retryDelayMs <= 60000) {
+            console.warn(`Model ${modelName} quota exhausted. Retry after ${retryDelayMs}ms.`);
+            await sleep(retryDelayMs);
+          }
+        }
+      }
+
+      throw lastError || new Error('All Gemini model attempts failed.');
     } catch (error: any) {
       console.error('Chat error details:', {
         message: error?.message,
@@ -362,6 +404,12 @@ ${contextText}
       });
 
       const upstreamMessage = error?.message || '未知錯誤';
+      const statusText = error?.status || '';
+      const messageText = typeof error?.message === 'string' ? error.message : '';
+      const isQuotaError = statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.includes('quota');
+      if (isQuotaError) {
+        return res.status(429).json({ error: `Gemini 額度不足或暫時超限，請稍後重試，或在 Google AI Studio 提升配額/改用可用模型。上游訊息: ${upstreamMessage}` });
+      }
       res.status(500).json({ error: `Gemini API 錯誤: ${upstreamMessage}` });
     }
   });
