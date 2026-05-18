@@ -41,6 +41,33 @@ export default function App() {
 }
 
 // === CHAT COMPONENT ===
+
+function renderInlineBold(text: string) {
+  const segments = text.split(/(\*\*[^*]+\*\*)/g);
+  return segments.map((segment, index) => {
+    if (segment.startsWith('**') && segment.endsWith('**')) {
+      return <strong key={index}>{segment.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={index}>{segment}</React.Fragment>;
+  });
+}
+
+function renderBasicMarkdown(text: string) {
+  const lines = text.split('\n');
+  return lines.map((line, index) => {
+    const bulletMatch = line.match(/^\s*\*\s+(.*)$/);
+    if (bulletMatch) {
+      return (
+        <div key={index} className="pl-1">
+          • {renderInlineBold(bulletMatch[1])}
+        </div>
+      );
+    }
+
+    return <div key={index}>{renderInlineBold(line)}</div>;
+  });
+}
+
 function ChatView() {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', parts: [{ text: '您好！歡迎使用生態檢核智能諮詢系統。請輸入您關於生態檢核的任何問題，系統將依據專業規範與專案文件為您提供精準、可靠的解答。' }] }
@@ -114,7 +141,7 @@ function ChatView() {
                     : "bg-white border border-neutral-200 text-neutral-800 rounded-tl-none whitespace-pre-wrap"
                 )}
               >
-                {m.parts[0].text}
+                {m.role === 'model' ? renderBasicMarkdown(m.parts[0].text) : m.parts[0].text}
               </div>
             </motion.div>
           ))}
