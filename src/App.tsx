@@ -42,13 +42,29 @@ export default function App() {
 
 // === CHAT COMPONENT ===
 
-function renderBasicMarkdown(text: string) {
+function renderInlineBold(text: string) {
   const segments = text.split(/(\*\*[^*]+\*\*)/g);
   return segments.map((segment, index) => {
     if (segment.startsWith('**') && segment.endsWith('**')) {
       return <strong key={index}>{segment.slice(2, -2)}</strong>;
     }
     return <React.Fragment key={index}>{segment}</React.Fragment>;
+  });
+}
+
+function renderBasicMarkdown(text: string) {
+  const lines = text.split('\n');
+  return lines.map((line, index) => {
+    const bulletMatch = line.match(/^\s*\*\s+(.*)$/);
+    if (bulletMatch) {
+      return (
+        <div key={index} className="pl-1">
+          • {renderInlineBold(bulletMatch[1])}
+        </div>
+      );
+    }
+
+    return <div key={index}>{renderInlineBold(line)}</div>;
   });
 }
 
