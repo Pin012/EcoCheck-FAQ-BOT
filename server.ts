@@ -49,7 +49,8 @@ function saveDb(data: DocumentRecord[]) {
 }
 
 // Gemini Initialization
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Multer Setup
 const storage = multer.diskStorage({
@@ -215,9 +216,31 @@ async function startServer() {
   // RAG Chat Endpoint
   app.post('/api/chat', async (req, res) => {
     const { messages } = req.body;
-    
+
+    if (!GEMINI_API_KEY) {
+      return res.status(500).json({ error: '伺服器尚未設定 GEMINI_API_KEY。請先完成 .env 設定後重啟服務。' });
+    }
+
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format.' });
+    }
+
+    const normalizedMessages = messages
+      .filter((m) => m && (m.role === 'user' || m.role === 'model') && Array.isArray(m.parts))
+      .map((m) => ({
+        role: m.role,
+        parts: m.parts
+          .filter((p) => p && typeof p.text === 'string' && p.text.trim().length > 0)
+          .map((p) => ({ text: p.text.trim() }))
+      }))
+      .filter((m) => m.parts.length > 0);
+
+    while (normalizedMessages.length > 0 && normalizedMessages[0].role !== 'user') {
+      normalizedMessages.shift();
+    }
+
+    if (normalizedMessages.length === 0) {
+      return res.status(400).json({ error: 'No valid user message provided.' });
     }
 
     const db = getDb();
@@ -253,7 +276,7 @@ ${contextText}
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
-        contents: messages,
+        contents: normalizedMessages,
         config: {
           systemInstruction: systemInstruction,
           temperature: 0.2, // Low temperature for factual RAG responses
