@@ -3,8 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
-import * as pdfParseObj from 'pdf-parse';
-const pdfParse = (pdfParseObj as any).default || pdfParseObj;
+import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import * as xlsx from 'xlsx';
 import { GoogleGenAI } from '@google/genai';
@@ -114,8 +113,13 @@ async function extractText(filePath: string, originalName: string): Promise<stri
   
   if (ext === '.pdf') {
     const dataBuffer = fs.readFileSync(filePath);
-    const data = await pdfParse(dataBuffer);
-    return data.text;
+    const parser = new PDFParse({ data: dataBuffer });
+    try {
+      const data = await parser.getText();
+      return data.text;
+    } finally {
+      await parser.destroy();
+    }
   } else if (ext === '.docx') {
     const result = await mammoth.extractRawText({ path: filePath });
     return result.value;
