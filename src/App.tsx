@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Send, Upload, FileText, Trash2, ShieldAlert } from 'lucide-react';
+import { Send, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -24,27 +23,20 @@ interface DocumentInfo {
 
 export default function App() {
   return (
-    <Router>
-      <div className="flex h-screen bg-neutral-50 text-neutral-900 font-sans">
-        <div className="flex flex-col w-full h-full">
-          {/* Header */}
-          <header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-6 h-6 text-emerald-600" />
-              <h1 className="font-semibold text-lg tracking-tight">EcoCheck FAQ</h1>
-            </div>
-          </header>
+    <div className="flex h-screen bg-neutral-50 text-neutral-900 font-sans">
+      <div className="flex flex-col w-full h-full">
+        <header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-6 h-6 text-emerald-600" />
+            <h1 className="font-semibold text-lg tracking-tight">EcoCheck FAQ</h1>
+          </div>
+        </header>
 
-          {/* Main Content Area */}
-          <main className="flex-1 overflow-hidden relative">
-            <Routes>
-              <Route path="/" element={<ChatView />} />
-              <Route path="/adminfile" element={<AdminView />} />
-            </Routes>
-          </main>
-        </div>
+        <main className="flex-1 overflow-hidden relative">
+          <ChatView />
+        </main>
       </div>
-    </Router>
+    </div>
   );
 }
 
@@ -168,149 +160,3 @@ function ChatView() {
   );
 }
 
-// === ADMIN COMPONENT ===
-function AdminView() {
-  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const loadDocuments = async () => {
-    try {
-      const res = await fetch('/api/documents');
-      const data = await res.json();
-      if (data.documents) {
-        setDocuments(data.documents);
-      }
-    } catch (err) {
-      console.error('Failed to load documents', err);
-    }
-  };
-
-  useEffect(() => {
-    loadDocuments();
-  }, []);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 20 * 1024 * 1024) {
-      alert("檔案過大！請上傳小於 20MB 的檔案。");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setIsUploading(true);
-    try {
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        loadDocuments();
-      } else {
-        alert("上傳失敗: " + (data.error || "未知錯誤"));
-      }
-    } catch (err) {
-      alert("上傳失敗，請檢查網路連線。");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`確定要刪除文件「${name}」嗎？`)) return;
-
-    try {
-      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        loadDocuments();
-      } else {
-        alert("刪除失敗");
-      }
-    } catch (err) {
-      alert("刪除失敗，請檢查網路連線。");
-    }
-  };
-
-  return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto flex flex-col h-full overflow-y-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">資料庫管理</h2>
-          <p className="text-sm text-neutral-500 mt-1">上傳 PDF, DOCX, XLSX 檔案供知識庫擷取</p>
-          <p className="text-xs text-neutral-400 mt-1">或直接放入伺服器專案目錄：<code className="bg-neutral-100 px-1 rounded">documents/</code>（重啟服務後自動讀取）</p>
-        </div>
-        
-        <div>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            className="hidden" 
-            accept=".pdf,.docx,.xlsx,.txt,.csv"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 font-medium text-sm shadow-sm"
-          >
-            {isUploading ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4" />
-            )}
-            {isUploading ? "上傳解析中..." : "上傳新文件"}
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
-        {documents.length === 0 ? (
-          <div className="p-12 flex flex-col items-center justify-center text-center">
-            <div className="bg-neutral-100 p-4 rounded-full mb-4">
-              <FileText className="w-8 h-8 text-neutral-400" />
-            </div>
-            <h3 className="font-medium text-lg text-neutral-900">目前尚無文件</h3>
-            <p className="text-neutral-500 text-sm mt-1 max-w-sm">請點擊右上角「上傳新文件」來建立知識庫，供系統進行 RAG 問答。</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-neutral-200">
-            {documents.map((doc) => (
-              <li key={doc.id} className="p-4 flex items-center justify-between hover:bg-neutral-50 transition-colors">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="bg-emerald-100 p-2 rounded-lg shrink-0">
-                    <FileText className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="font-medium text-neutral-900 text-sm truncate">{doc.originalName}</h4>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      來源：{doc.source === 'local' ? 'documents 資料夾' : '後台上傳'}
-                    </p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      時間：{new Date(doc.uploadedAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(doc.id, doc.originalName)}
-                  disabled={doc.source === 'local'}
-                  className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:hover:text-neutral-400 disabled:hover:bg-transparent"
-                  aria-label={doc.source === 'local' ? '請到 documents 資料夾刪除' : 'Delete document'}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}

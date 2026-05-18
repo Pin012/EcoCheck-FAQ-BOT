@@ -68,7 +68,7 @@ const upload = multer({ storage });
 
 
 
-const SUPPORTED_EXTENSIONS = new Set(['.pdf', '.docx', '.xlsx', '.txt', '.csv']);
+const SUPPORTED_EXTENSIONS = new Set(['.pdf', '.docx', '.xlsx', '.txt', '.csv', '.md', '.markdown']);
 
 async function syncLocalDocumentsToDb() {
   const db = getDb();
@@ -135,7 +135,7 @@ async function extractText(filePath: string, originalName: string): Promise<stri
       text += '\n';
     });
     return text;
-  } else if (ext === '.txt' || ext === '.csv') {
+  } else if (ext === '.txt' || ext === '.csv' || ext === '.md' || ext === '.markdown') {
     return fs.readFileSync(filePath, 'utf-8');
   } else if (ext === '.pptx') {
     // PPTX extraction is complex without heavy libraries. We'll fallback to a notice.
