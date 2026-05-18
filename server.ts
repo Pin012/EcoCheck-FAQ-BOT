@@ -49,7 +49,8 @@ function saveDb(data: DocumentRecord[]) {
 }
 
 // Gemini Initialization
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Multer Setup
 const storage = multer.diskStorage({
@@ -141,6 +142,83 @@ async function extractText(filePath: string, originalName: string): Promise<stri
   return "Unsupported file format.";
 }
 
+
+function chunkText(text: string, maxChunkLength = 1200): string[] {
+  const normalized = text.replace(/\r\n/g, '\n');
+  const paragraphs = normalized.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const chunks: string[] = [];
+
+  for (const paragraph of paragraphs) {
+    if (paragraph.length <= maxChunkLength) {
+      chunks.push(paragraph);
+      continue;
+    }
+
+    for (let i = 0; i < paragraph.length; i += maxChunkLength) {
+      chunks.push(paragraph.slice(i, i + maxChunkLength));
+    }
+  }
+
+  return chunks;
+}
+
+function buildContextText(records: DocumentRecord[], userQuery: string): string {
+  if (records.length === 0) {
+    return 'No documents have been uploaded yet. Inform the user they need to upload documents in the Admin panel.';
+  }
+
+  const queryTokens = userQuery
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+
+  const scored: { docName: string; text: string; score: number }[] = [];
+
+  for (const rec of records) {
+    const chunks = chunkText(rec.text);
+    for (const chunk of chunks) {
+      const lower = chunk.toLowerCase();
+      let score = 0;
+      for (const token of queryTokens) {
+        if (lower.includes(token)) score += 1;
+      }
+      if (score > 0) {
+        scored.push({ docName: rec.originalName, text: chunk, score });
+      }
+    }
+  }
+
+  const MAX_CONTEXT_CHARS = 120000;
+
+  if (scored.length === 0) {
+    let fallback = '';
+    for (const rec of records) {
+      const snippet = rec.text.slice(0, 8000);
+      fallback += `--- DOCUMENT: ${rec.originalName} ---
+${snippet}
+
+`;
+      if (fallback.length >= MAX_CONTEXT_CHARS) break;
+    }
+    return fallback.slice(0, MAX_CONTEXT_CHARS);
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+
+  let context = '';
+  for (const item of scored) {
+    const block = `--- DOCUMENT: ${item.docName} ---
+${item.text}
+
+`;
+    if (context.length + block.length > MAX_CONTEXT_CHARS) break;
+    context += block;
+  }
+
+  return context || 'No relevant context found in uploaded documents.';
+}
+
 async function startServer() {
   await syncLocalDocumentsToDb();
 
@@ -215,25 +293,39 @@ async function startServer() {
   // RAG Chat Endpoint
   app.post('/api/chat', async (req, res) => {
     const { messages } = req.body;
-    
+
+    if (!GEMINI_API_KEY) {
+      return res.status(500).json({ error: '伺服器尚未設定 GEMINI_API_KEY。請先完成 .env 設定後重啟服務。' });
+    }
+
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format.' });
     }
 
-    const db = getDb();
-    
-    // Combine all extracted text for context
-    // In a real system you would use Embeddings & Vector DB or Gemini File API.
-    let contextText = '';
-    if (db.length === 0) {
-      contextText = "No documents have been uploaded yet. Inform the user they need to upload documents in the Admin panel.";
-    } else {
-      contextText = db.map((rec, i) => `--- DOCUMENT ${i+1}: ${rec.originalName} ---\n${rec.text}\n`).join('\n\n');
+    const normalizedMessages = messages
+      .filter((m) => m && (m.role === 'user' || m.role === 'model') && Array.isArray(m.parts))
+      .map((m) => ({
+        role: m.role,
+        parts: m.parts
+          .filter((p) => p && typeof p.text === 'string' && p.text.trim().length > 0)
+          .map((p) => ({ text: p.text.trim() }))
+      }))
+      .filter((m) => m.parts.length > 0);
+
+    while (normalizedMessages.length > 0 && normalizedMessages[0].role !== 'user') {
+      normalizedMessages.shift();
     }
 
-    // To prevent exceeding context limits for large numbers of documents,
-    // we strictly use gemini-2.5-pro which has 2M context window.
-    // If you ever needed to trim, you would do it here.
+    if (normalizedMessages.length === 0) {
+      return res.status(400).json({ error: 'No valid user message provided.' });
+    }
+
+    const db = getDb();
+    const latestUserMessage = [...normalizedMessages].reverse().find((m) => m.role === 'user');
+    const userQuery = latestUserMessage?.parts?.[0]?.text || '';
+
+    // Build bounded context to prevent token overflow and API failures on large documents.
+    const contextText = buildContextText(db, userQuery);
     
     const systemInstruction = `
 You are an Ecological Check FAQ assistant (生態檢核 FAQ系統專家) for an engineering consulting firm.
@@ -253,7 +345,7 @@ ${contextText}
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
-        contents: messages,
+        contents: normalizedMessages,
         config: {
           systemInstruction: systemInstruction,
           temperature: 0.2, // Low temperature for factual RAG responses
@@ -261,9 +353,16 @@ ${contextText}
       });
 
       res.json({ response: response.text });
-    } catch (error) {
-      console.error('Chat error:', error);
-      res.status(500).json({ error: 'Failed to generate response.' });
+    } catch (error: any) {
+      console.error('Chat error details:', {
+        message: error?.message,
+        status: error?.status,
+        code: error?.code,
+        details: error?.details
+      });
+
+      const upstreamMessage = error?.message || '未知錯誤';
+      res.status(500).json({ error: `Gemini API 錯誤: ${upstreamMessage}` });
     }
   });
 
