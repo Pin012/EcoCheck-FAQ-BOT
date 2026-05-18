@@ -9,20 +9,23 @@ import mammoth from 'mammoth';
 import * as xlsx from 'xlsx';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = process.cwd();
 
 // Configuration
 const PORT = 3000;
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-const DB_FILE = path.join(__dirname, 'db.json');
+const UPLOADS_DIR = path.join(APP_ROOT, 'uploads');
+const LOCAL_DOCS_DIR = path.join(APP_ROOT, 'documents');
+const DB_FILE = path.join(APP_ROOT, 'db.json');
 
 // Ensure directories exist
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+if (!fs.existsSync(LOCAL_DOCS_DIR)) {
+  fs.mkdirSync(LOCAL_DOCS_DIR, { recursive: true });
 }
 
 // Database Helper
@@ -32,6 +35,7 @@ interface DocumentRecord {
   path: string;
   text: string;
   uploadedAt: string;
+  source: 'upload' | 'local';
 }
 
 function getDb(): DocumentRecord[] {
@@ -60,6 +64,51 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+
+
+const SUPPORTED_EXTENSIONS = new Set(['.pdf', '.docx', '.xlsx', '.txt', '.csv']);
+
+async function syncLocalDocumentsToDb() {
+  const db = getDb();
+  const localFiles = fs.readdirSync(LOCAL_DOCS_DIR).filter((file) => {
+    const fullPath = path.join(LOCAL_DOCS_DIR, file);
+    const ext = path.extname(file).toLowerCase();
+    return fs.statSync(fullPath).isFile() && SUPPORTED_EXTENSIONS.has(ext);
+  });
+
+  const nextDb: DocumentRecord[] = db.filter((record) => {
+    if (record.source !== 'local') return true;
+    return fs.existsSync(record.path);
+  });
+
+  for (const fileName of localFiles) {
+    const filePath = path.join(LOCAL_DOCS_DIR, fileName);
+    const id = `local-${fileName}`;
+    const existing = nextDb.find((record) => record.id === id);
+    const stat = fs.statSync(filePath);
+    const updatedAt = stat.mtime.toISOString();
+
+    if (existing && existing.uploadedAt === updatedAt) {
+      continue;
+    }
+
+    const text = await extractText(filePath, fileName);
+    const record: DocumentRecord = {
+      id,
+      originalName: fileName,
+      path: filePath,
+      text,
+      uploadedAt: updatedAt,
+      source: 'local'
+    };
+
+    const index = nextDb.findIndex((r) => r.id === id);
+    if (index >= 0) nextDb[index] = record;
+    else nextDb.push(record);
+  }
+
+  saveDb(nextDb);
+}
 async function extractText(filePath: string, originalName: string): Promise<string> {
   const ext = path.extname(originalName).toLowerCase();
   
@@ -89,6 +138,8 @@ async function extractText(filePath: string, originalName: string): Promise<stri
 }
 
 async function startServer() {
+  await syncLocalDocumentsToDb();
+
   const app = express();
   app.use(express.json());
 
@@ -96,7 +147,7 @@ async function startServer() {
 
   // Get uploaded documents
   app.get('/api/documents', (req, res) => {
-    const records = getDb().map(r => ({ id: r.id, originalName: r.originalName, uploadedAt: r.uploadedAt }));
+    const records = getDb().map(r => ({ id: r.id, originalName: r.originalName, uploadedAt: r.uploadedAt, source: r.source || 'upload' }));
     res.json({ documents: records });
   });
 
@@ -114,7 +165,8 @@ async function startServer() {
         originalName: req.file.originalname,
         path: req.file.path,
         text: text,
-        uploadedAt: new Date().toISOString()
+        uploadedAt: new Date().toISOString(),
+        source: 'upload'
       };
 
       const db = getDb();
@@ -139,7 +191,11 @@ async function startServer() {
     }
 
     const record = db[index];
-    
+
+    if (record.source === 'local') {
+      return res.status(400).json({ error: 'Local documents cannot be deleted via API. Please remove from documents folder.' });
+    }
+
     // Delete file
     if (fs.existsSync(record.path)) {
       fs.unlinkSync(record.path);

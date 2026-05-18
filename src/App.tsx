@@ -19,6 +19,7 @@ interface DocumentInfo {
   id: string;
   originalName: string;
   uploadedAt: string;
+  source?: 'upload' | 'local';
 }
 
 export default function App() {
@@ -244,6 +245,7 @@ function AdminView() {
         <div>
           <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">資料庫管理</h2>
           <p className="text-sm text-neutral-500 mt-1">上傳 PDF, DOCX, XLSX 檔案供知識庫擷取</p>
+          <p className="text-xs text-neutral-400 mt-1">或直接放入伺服器專案目錄：<code className="bg-neutral-100 px-1 rounded">documents/</code>（重啟服務後自動讀取）</p>
         </div>
         
         <div>
@@ -289,14 +291,18 @@ function AdminView() {
                   <div className="min-w-0">
                     <h4 className="font-medium text-neutral-900 text-sm truncate">{doc.originalName}</h4>
                     <p className="text-xs text-neutral-500 mt-0.5">
-                      {new Date(doc.uploadedAt).toLocaleString()}
+                      來源：{doc.source === 'local' ? 'documents 資料夾' : '後台上傳'}
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      時間：{new Date(doc.uploadedAt).toLocaleString()}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleDelete(doc.id, doc.originalName)}
-                  className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                  aria-label="Delete document"
+                  disabled={doc.source === 'local'}
+                  className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:hover:text-neutral-400 disabled:hover:bg-transparent"
+                  aria-label={doc.source === 'local' ? '請到 documents 資料夾刪除' : 'Delete document'}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
