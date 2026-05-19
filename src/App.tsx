@@ -52,20 +52,83 @@ function renderInlineBold(text: string) {
   });
 }
 
+function parseTableRow(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map(cell => cell.trim());
+}
+
+function isTableDivider(line: string) {
+  const row = parseTableRow(line);
+  return row.length > 0 && row.every(cell => /^:?-{3,}:?$/.test(cell));
+}
+
 function renderBasicMarkdown(text: string) {
   const lines = text.split('\n');
-  return lines.map((line, index) => {
+  const elements: React.ReactNode[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const hasPipe = line.includes('|');
+
+    if (hasPipe && index + 1 < lines.length && isTableDivider(lines[index + 1])) {
+      const headerCells = parseTableRow(line);
+      const bodyRows: string[][] = [];
+
+      index += 2;
+      while (index < lines.length && lines[index].includes('|')) {
+        bodyRows.push(parseTableRow(lines[index]));
+        index += 1;
+      }
+
+      elements.push(
+        <div key={`table-${index}`} className="overflow-x-auto my-2">
+          <table className="min-w-full border border-slate-300 border-collapse text-sm">
+            <thead className="bg-slate-100">
+              <tr>
+                {headerCells.map((cell, cellIndex) => (
+                  <th key={cellIndex} className="border border-slate-300 px-3 py-2 text-left font-semibold">
+                    {renderInlineBold(cell)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bodyRows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {headerCells.map((_, cellIndex) => (
+                    <td key={cellIndex} className="border border-slate-300 px-3 py-2 align-top">
+                      {renderInlineBold(row[cellIndex] ?? '')}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+
+      index -= 1;
+      continue;
+    }
+
     const bulletMatch = line.match(/^\s*\*\s+(.*)$/);
     if (bulletMatch) {
-      return (
+      elements.push(
         <div key={index} className="pl-1">
           • {renderInlineBold(bulletMatch[1])}
         </div>
       );
+      continue;
     }
 
-    return <div key={index}>{renderInlineBold(line)}</div>;
-  });
+    elements.push(<div key={index}>{renderInlineBold(line)}</div>);
+  }
+
+  return elements;
 }
 
 function ChatView() {
