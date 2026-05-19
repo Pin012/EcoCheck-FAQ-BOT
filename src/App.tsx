@@ -27,7 +27,7 @@ export default function App() {
       <div className="flex flex-col w-full h-full">
         <header className="bg-slate-900 text-slate-100 border-b border-slate-800 px-5 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
-            <ShieldAlert className="w-5 h-5 text-cyan-300" />
+            <ShieldAlert className="w-5 h-5 text-emerald-300" />
             <h1 className="font-semibold text-lg tracking-wide">EcoCheck Bot 生態檢核FAQ系統</h1>
           </div>
         </header>
@@ -145,7 +145,7 @@ function ChatView() {
                   className={cn(
                     'px-4 py-3 rounded-xl shadow-sm text-sm sm:text-base leading-7',
                     m.role === 'user'
-                      ? 'bg-cyan-700 text-white rounded-tr-none'
+                      ? 'bg-emerald-700 text-white rounded-tr-none'
                       : 'bg-white border border-slate-300 text-slate-800 rounded-tl-none whitespace-pre-wrap'
                   )}
                 >
@@ -184,7 +184,7 @@ function ChatView() {
       <div className="p-4 bg-slate-100 border-t border-slate-300 shrink-0">
         <form
           onSubmit={handleSubmit}
-          className="relative flex items-center shadow-sm bg-white border border-slate-400 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-cyan-700 focus-within:border-cyan-700 transition-all"
+          className="relative flex items-center shadow-sm bg-white border border-slate-400 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-700 focus-within:border-emerald-700 transition-all"
         >
           <input
             type="text"
@@ -197,7 +197,7 @@ function ChatView() {
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="absolute right-2 p-2 bg-cyan-700 text-white rounded-md hover:bg-cyan-800 disabled:opacity-50 disabled:hover:bg-cyan-700 transition-colors"
+            className="absolute right-2 p-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 disabled:opacity-50 disabled:hover:bg-emerald-700 transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
