@@ -66,6 +66,10 @@ function isTableDivider(line: string) {
   return row.length > 0 && row.every(cell => /^:?-{3,}:?$/.test(cell));
 }
 
+function splitBrTags(text: string) {
+  return text.split(/<br\s*\/?>/i);
+}
+
 function renderBasicMarkdown(text: string) {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
@@ -117,15 +121,56 @@ function renderBasicMarkdown(text: string) {
 
     const bulletMatch = line.match(/^\s*\*\s+(.*)$/);
     if (bulletMatch) {
+      const bulletParts = splitBrTags(bulletMatch[1]);
       elements.push(
         <div key={index} className="pl-1">
-          • {renderInlineBold(bulletMatch[1])}
+          •{' '}
+          {bulletParts.map((part, partIndex) => (
+            <React.Fragment key={partIndex}>
+              {partIndex > 0 && <br />}
+              {renderInlineBold(part)}
+            </React.Fragment>
+          ))}
         </div>
       );
       continue;
     }
 
-    elements.push(<div key={index}>{renderInlineBold(line)}</div>);
+    const headingMatch = line.match(/^\s*(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      const headingLevel = headingMatch[1].length;
+      const headingParts = splitBrTags(headingMatch[2]);
+      const headingClass =
+        headingLevel === 1
+          ? 'text-xl font-bold'
+          : headingLevel === 2
+            ? 'text-lg font-bold'
+            : 'text-base font-semibold';
+
+      elements.push(
+        <div key={index} className={headingClass}>
+          {headingParts.map((part, partIndex) => (
+            <React.Fragment key={partIndex}>
+              {partIndex > 0 && <br />}
+              {renderInlineBold(part)}
+            </React.Fragment>
+          ))}
+        </div>
+      );
+      continue;
+    }
+
+    const lineParts = splitBrTags(line);
+    elements.push(
+      <div key={index}>
+        {lineParts.map((part, partIndex) => (
+          <React.Fragment key={partIndex}>
+            {partIndex > 0 && <br />}
+            {renderInlineBold(part)}
+          </React.Fragment>
+        ))}
+      </div>
+    );
   }
 
   return elements;
