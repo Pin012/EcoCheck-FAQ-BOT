@@ -160,7 +160,7 @@ function ChatView() {
                     aria-label="複製回覆內容"
                   >
                     {copiedIndex === idx ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copiedIndex === idx ? '已複製' : '一鍵複製'}
+                    {copiedIndex === idx ? '已複製' : ''}
                   </button>
                 )}
               </div>
