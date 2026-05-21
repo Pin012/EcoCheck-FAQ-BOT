@@ -52,7 +52,10 @@ function saveDb(data: DocumentRecord[]) {
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const PRIMARY_MODEL = 'gemini-2.5-flash';
-const FALLBACK_MODEL = 'gemini-2.5-pro';
+const FALLBACK_MODELS = (process.env.GEMINI_FALLBACK_MODELS || 'gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash-8b,gemini-1.5-flash')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 // Multer Setup
 const storage = multer.diskStorage({
@@ -370,7 +373,7 @@ ${contextText}
     `;
 
     try {
-      const modelCandidates = [PRIMARY_MODEL, FALLBACK_MODEL];
+      const modelCandidates = [PRIMARY_MODEL, ...FALLBACK_MODELS.filter((m) => m !== PRIMARY_MODEL)];
       let lastError: any = null;
 
       for (const modelName of modelCandidates) {

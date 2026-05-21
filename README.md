@@ -44,7 +44,10 @@ npm install
 3. 打開 `.env` 檔案，填入您的 Google Gemini API 金鑰：
    ```env
    GEMINI_API_KEY="請在這裡填寫您的_GEMINI_API_KEY"
+   # 遇到額度/錯誤時的備援模型（可填多個，逗號分隔）
+   GEMINI_FALLBACK_MODELS="gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash-8b,gemini-1.5-flash"
    ```
+   > 預設主模型為 `gemini-2.5-flash`。若主模型報錯或配額不足，系統會自動改用 `GEMINI_FALLBACK_MODELS` 設定的較輕量模型。
 
 ### 4. 啟動系統
 執行以下指令來啟動系統引擎：
