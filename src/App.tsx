@@ -178,7 +178,7 @@ function renderBasicMarkdown(text: string) {
 
 function ChatView() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', parts: [{ text: '您好！歡迎使用生態檢核智能諮詢系統。請輸入您關於生態檢核的任何問題，系統將依據專業規範與專案文件為您提供解答。' }] }
+    { role: 'model', parts: [{ text: '您好！歡迎使用生態檢核智能諮詢系統。請輸入您關於生態檢核的任何問題，系統將依據專業規範與法規文件為您提供解答。' }] }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -299,7 +299,7 @@ function ChatView() {
             value={input}
             onChange={e => setInput(e.target.value)}
             disabled={isLoading}
-            placeholder="請輸入關於生態檢核相關查詢內容或問題..."
+            placeholder="請輸入您的問題..."
             className="flex-1 w-full border-0 py-3 md:py-4 pl-4 pr-12 text-sm sm:text-base outline-none bg-transparent disabled:opacity-50"
           />
           <button
