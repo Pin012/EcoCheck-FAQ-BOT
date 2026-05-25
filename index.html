@@ -33,16 +33,20 @@
         justify-content: center;
         padding: 24px;
         z-index: 9999;
+        background: radial-gradient(circle at 20% 20%, rgba(22, 163, 74, 0.2), transparent 42%),
+                    radial-gradient(circle at 80% 70%, rgba(30, 64, 175, 0.2), transparent 45%),
+                    rgba(2, 6, 23, 0.94);
+        backdrop-filter: blur(6px);
       }
 
       .boot-panel {
-        width: min(560px, 100%);
-        border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--line));
-        background: rgba(15, 23, 42, 0.86);
-        backdrop-filter: blur(10px);
-        border-radius: 16px;
-        padding: 28px;
-        box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
+        width: min(620px, 100%);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.82);
+        backdrop-filter: blur(14px);
+        border-radius: 20px;
+        padding: 36px 32px;
+        box-shadow: 0 24px 70px rgba(2, 6, 23, 0.55);
       }
 
       .boot-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
@@ -53,8 +57,8 @@
         animation: spin 0.9s linear infinite;
       }
 
-      .boot-title { margin: 0; color: var(--text-main); font-size: 1.04rem; font-weight: 600; }
-      .boot-desc { margin: 0 0 18px; color: var(--text-sub); font-size: 0.92rem; line-height: 1.6; }
+      .boot-title { margin: 0; color: var(--text-main); font-size: 1.12rem; font-weight: 650; letter-spacing: .02em; }
+      .boot-desc { margin: 0 0 20px; color: var(--text-sub); font-size: 0.95rem; line-height: 1.6; }
 
       .boot-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
       .boot-step {
@@ -82,14 +86,14 @@
           <span class="spinner" aria-hidden="true"></span>
           <h1 class="boot-title">EcoCheck 系統服務啟動中</h1>
         </div>
-        <p class="boot-desc">系統正在完成啟動前檢查，首次喚醒可能需要約 30–90 秒，請稍候。</p>
+        <p class="boot-desc">正在為您準備生態檢核作業環境，請稍候。</p>
         <ul class="boot-steps" id="boot-steps">
           <li class="boot-step active"><span class="boot-dot"></span>正在初始化 AI 服務</li>
           <li class="boot-step"><span class="boot-dot"></span>正在連線知識庫</li>
           <li class="boot-step"><span class="boot-dot"></span>正在檢查系統狀態</li>
           <li class="boot-step"><span class="boot-dot"></span>正在載入生態檢核模組</li>
         </ul>
-        <p class="boot-status" id="boot-status">正在喚醒 API 服務...</p>
+        <p class="boot-status" id="boot-status">正在建立安全連線...</p>
       </section>
     </div>
 
@@ -121,11 +125,11 @@
             }
           } catch {}
 
-          statusEl.textContent = `正在喚醒 API 服務...（第 ${i} 次檢查）`;
+          statusEl.textContent = '系統仍在準備中，請稍候...';
           await wait(2000);
         }
 
-        statusEl.textContent = '服務啟動時間較長，仍將先載入主系統。';
+        statusEl.textContent = '已進入主系統，後續服務將於背景完成。';
       }
 
       (async () => {
