@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,9 +7,139 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>生態檢核FAQ系統 Ecocheck Bot</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --brand: #16a34a;
+        --surface: #0f172a;
+        --line: #1e293b;
+        --text-main: #e2e8f0;
+        --text-sub: #94a3b8;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+        background: radial-gradient(circle at top, #1e293b 0%, var(--surface) 55%, #020617 100%);
+      }
+
+      #boot-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 9999;
+      }
+
+      .boot-panel {
+        width: min(560px, 100%);
+        border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--line));
+        background: rgba(15, 23, 42, 0.86);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
+      }
+
+      .boot-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+      .spinner {
+        width: 18px; height: 18px; border-radius: 999px;
+        border: 2px solid rgba(148, 163, 184, 0.35);
+        border-top-color: var(--brand);
+        animation: spin 0.9s linear infinite;
+      }
+
+      .boot-title { margin: 0; color: var(--text-main); font-size: 1.04rem; font-weight: 600; }
+      .boot-desc { margin: 0 0 18px; color: var(--text-sub); font-size: 0.92rem; line-height: 1.6; }
+
+      .boot-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+      .boot-step {
+        color: #cbd5e1;
+        font-size: 0.92rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0.75;
+        transition: opacity 180ms ease;
+      }
+      .boot-step.active { opacity: 1; }
+      .boot-dot { width: 6px; height: 6px; border-radius: 999px; background: #64748b; }
+      .boot-step.active .boot-dot { background: var(--brand); }
+
+      .boot-status { margin-top: 16px; color: #86efac; font-size: 0.82rem; min-height: 1.25rem; }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <div id="boot-screen" aria-live="polite">
+      <section class="boot-panel" role="status" aria-label="系統啟動狀態">
+        <div class="boot-head">
+          <span class="spinner" aria-hidden="true"></span>
+          <h1 class="boot-title">EcoCheck 系統服務啟動中</h1>
+        </div>
+        <p class="boot-desc">系統正在完成啟動前檢查，首次喚醒可能需要約 30–90 秒，請稍候。</p>
+        <ul class="boot-steps" id="boot-steps">
+          <li class="boot-step active"><span class="boot-dot"></span>正在初始化 AI 服務</li>
+          <li class="boot-step"><span class="boot-dot"></span>正在連線知識庫</li>
+          <li class="boot-step"><span class="boot-dot"></span>正在檢查系統狀態</li>
+          <li class="boot-step"><span class="boot-dot"></span>正在載入生態檢核模組</li>
+        </ul>
+        <p class="boot-status" id="boot-status">正在喚醒 API 服務...</p>
+      </section>
+    </div>
+
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+
+    <script type="module">
+      const steps = [...document.querySelectorAll('.boot-step')];
+      const statusEl = document.getElementById('boot-status');
+      const bootScreen = document.getElementById('boot-screen');
+      let stepIndex = 0;
+
+      const animateSteps = setInterval(() => {
+        stepIndex = (stepIndex + 1) % steps.length;
+        steps.forEach((step, idx) => step.classList.toggle('active', idx === stepIndex));
+      }, 1400);
+
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+      async function waitForApi(maxAttempts = 45) {
+        for (let i = 1; i <= maxAttempts; i += 1) {
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3500);
+            const response = await fetch('/health', { cache: 'no-store', signal: controller.signal });
+            clearTimeout(timeout);
+            if (response.ok) {
+              statusEl.textContent = '系統檢查完成，正在進入主系統...';
+              return;
+            }
+          } catch {}
+
+          statusEl.textContent = `正在喚醒 API 服務...（第 ${i} 次檢查）`;
+          await wait(2000);
+        }
+
+        statusEl.textContent = '服務啟動時間較長，仍將先載入主系統。';
+      }
+
+      (async () => {
+        await waitForApi();
+        clearInterval(animateSteps);
+
+        await import('/src/main.tsx');
+
+        if (bootScreen) {
+          bootScreen.style.transition = 'opacity 220ms ease';
+          bootScreen.style.opacity = '0';
+          setTimeout(() => bootScreen.remove(), 240);
+        }
+      })();
+    </script>
   </body>
 </html>
