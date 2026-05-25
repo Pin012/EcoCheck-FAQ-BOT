@@ -38,12 +38,11 @@ npm install
 ```
 
 ### 3. 設定環境變數 (API 金鑰)
-本系統依賴 Google 的 Gemini API 來生成回答。**金鑰只放在伺服器環境變數，不寫進程式碼、不提交到 Git。**
+本系統依賴 Google 的 Gemini API 來生成回答。**金鑰只放在伺服器環境變數。**
 
-1. **Google AI Studio（每個帳號都要做）**
+1. **Google AI Studio**
    - 登入 [Google AI Studio](https://aistudio.google.com/)。
-   - 進入 API Keys 頁面，分別建立 3 把 Gemini API Key。
-   - 先暫存於你的密碼管理工具，不要貼到 Git 版本庫。
+   - 進入 API Keys 頁面，分別建立 3 把 Gemini API Key，並暫存於你的密碼管理工具。
 
 2. **伺服器平台（部署機）設定環境變數**
    - 在你的部署平台（例如 VM 的 systemd、Docker、Render、Railway、Cloud Run 等）設定：
@@ -51,7 +50,7 @@ npm install
    GEMINI_API_KEYS="<KEY_1>,<KEY_2>,<KEY_3>"
    GEMINI_FALLBACK_MODELS="gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash-8b,gemini-1.5-flash"
    ```
-   - 若你只放單一金鑰，可改設 `GEMINI_API_KEY`。
+   - 若只放單一金鑰，可改設 `GEMINI_API_KEY`。
 
 3. **本機開發（僅本機測試時）**
    - 在專案根目錄複製 `.env.example` 成 `.env`。
