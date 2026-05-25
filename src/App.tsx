@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ShieldAlert, Copy, Check } from 'lucide-react';
+import { Send, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -27,7 +27,7 @@ export default function App() {
       <div className="flex flex-col w-full h-full">
         <header className="bg-slate-900 text-slate-100 border-b border-slate-800 px-5 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
-            <ShieldAlert className="w-5 h-5 text-emerald-300" />
+            <img src="/brand-icon.png" alt="EcoCheck 圖示" className="w-6 h-6 object-contain" />
             <h1 className="font-semibold text-lg tracking-wide">EcoCheck Bot 生態檢核FAQ系統</h1>
           </div>
         </header>
