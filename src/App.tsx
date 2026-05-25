@@ -28,7 +28,7 @@ export default function App() {
         <header className="bg-slate-900 text-slate-100 border-b border-slate-800 px-5 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
             <img src="/brand-icon.png" alt="EcoCheck 圖示" className="w-6 h-6 object-contain" />
-            <h1 className="font-semibold text-lg tracking-wide">EcoCheck Bot 生態檢核FAQ系統</h1>
+            <h1 className="font-semibold text-lg tracking-wide">EcoCheck FAQ Bot 生態檢核諮詢系統</h1>
           </div>
         </header>
 
@@ -178,7 +178,7 @@ function renderBasicMarkdown(text: string) {
 
 function ChatView() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', parts: [{ text: '您好！歡迎使用生態檢核智能諮詢系統。請輸入您關於生態檢核的任何問題，系統將依據專業規範與法規文件為您提供解答。' }] }
+    { role: 'model', parts: [{ text: '您好！歡迎使用生態檢核諮詢系統。請輸入關於生態檢核的任何問題，系統將依據專業規範與法規文件為您提供解答。' }] }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
