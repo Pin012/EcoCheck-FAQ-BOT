@@ -50,7 +50,11 @@ function saveDb(data: DocumentRecord[]) {
 
 // Gemini Initialization
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const GEMINI_API_KEYS = (process.env.GEMINI_API_KEYS || '')
+  .split(',')
+  .map((k) => k.trim())
+  .filter(Boolean);
+const API_KEYS = GEMINI_API_KEYS.length > 0 ? GEMINI_API_KEYS : (GEMINI_API_KEY ? [GEMINI_API_KEY] : []);
 const PRIMARY_MODEL = 'gemini-2.5-flash';
 const FALLBACK_MODELS = (process.env.GEMINI_FALLBACK_MODELS || 'gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash-8b,gemini-1.5-flash')
   .split(',')
@@ -322,8 +326,8 @@ async function startServer() {
   app.post('/api/chat', async (req, res) => {
     const { messages } = req.body;
 
-    if (!GEMINI_API_KEY) {
-      return res.status(500).json({ error: '伺服器尚未設定 GEMINI_API_KEY。請先完成 .env 設定後重啟服務。' });
+    if (API_KEYS.length === 0) {
+      return res.status(500).json({ error: '伺服器尚未設定 GEMINI_API_KEY 或 GEMINI_API_KEYS。請先完成 .env 設定後重啟服務。' });
     }
 
     if (!messages || !Array.isArray(messages)) {
@@ -376,28 +380,31 @@ ${contextText}
       const modelCandidates = [PRIMARY_MODEL, ...FALLBACK_MODELS.filter((m) => m !== PRIMARY_MODEL)];
       let lastError: any = null;
 
-      for (const modelName of modelCandidates) {
-        try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: normalizedMessages,
-            config: {
-              systemInstruction: systemInstruction,
-              temperature: 0.2, // Low temperature for factual RAG responses
+      for (const apiKey of API_KEYS) {
+        const ai = new GoogleGenAI({ apiKey });
+        for (const modelName of modelCandidates) {
+          try {
+            const response = await ai.models.generateContent({
+              model: modelName,
+              contents: normalizedMessages,
+              config: {
+                systemInstruction: systemInstruction,
+                temperature: 0.2, // Low temperature for factual RAG responses
+              }
+            });
+
+            return res.json({ response: response.text });
+          } catch (error: any) {
+            lastError = error;
+            if (!isQuotaError(error)) {
+              throw error;
             }
-          });
 
-          return res.json({ response: response.text });
-        } catch (error: any) {
-          lastError = error;
-          if (!isQuotaError(error)) {
-            throw error;
-          }
-
-          const retryDelayMs = parseRetryDelayMs(error);
-          if (retryDelayMs && retryDelayMs <= 60000) {
-            console.warn(`Model ${modelName} quota exhausted. Retry after ${retryDelayMs}ms.`);
-            await sleep(retryDelayMs);
+            const retryDelayMs = parseRetryDelayMs(error);
+            if (retryDelayMs && retryDelayMs <= 60000) {
+              console.warn(`API key (尾碼:${apiKey.slice(-4)}) model ${modelName} quota exhausted. Retry after ${retryDelayMs}ms.`);
+              await sleep(retryDelayMs);
+            }
           }
         }
       }

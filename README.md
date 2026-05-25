@@ -38,16 +38,26 @@ npm install
 ```
 
 ### 3. 設定環境變數 (API 金鑰)
-本系統依賴 Google 的 Gemini API 來生成回答。
-1. 在專案的根目錄下，找到 `.env.example` 檔案。
-2. 將其複製並重新命名為 `.env`。
-3. 打開 `.env` 檔案，填入您的 Google Gemini API 金鑰：
+本系統依賴 Google 的 Gemini API 來生成回答。**金鑰只放在伺服器環境變數，不寫進程式碼、不提交到 Git。**
+
+1. **Google AI Studio（每個帳號都要做）**
+   - 登入 [Google AI Studio](https://aistudio.google.com/)。
+   - 進入 API Keys 頁面，分別建立 3 把 Gemini API Key。
+   - 先暫存於你的密碼管理工具，不要貼到 Git 版本庫。
+
+2. **伺服器平台（部署機）設定環境變數**
+   - 在你的部署平台（例如 VM 的 systemd、Docker、Render、Railway、Cloud Run 等）設定：
    ```env
-   GEMINI_API_KEY="請在這裡填寫您的_GEMINI_API_KEY"
-   # 遇到額度/錯誤時的備援模型（可填多個，逗號分隔）
+   GEMINI_API_KEYS="<KEY_1>,<KEY_2>,<KEY_3>"
    GEMINI_FALLBACK_MODELS="gemini-2.0-flash-lite,gemini-2.0-flash,gemini-1.5-flash-8b,gemini-1.5-flash"
    ```
-   > 預設主模型為 `gemini-2.5-flash`。若主模型報錯或配額不足，系統會自動改用 `GEMINI_FALLBACK_MODELS` 設定的較輕量模型。
+   - 若你只放單一金鑰，可改設 `GEMINI_API_KEY`。
+
+3. **本機開發（僅本機測試時）**
+   - 在專案根目錄複製 `.env.example` 成 `.env`。
+   - 只在本機 `.env` 填入測試金鑰，`.env` 不可提交。
+
+> 預設主模型為 `gemini-2.5-flash`。若主模型報錯或配額不足，系統會先嘗試 `GEMINI_FALLBACK_MODELS`，並在多金鑰模式下自動輪替到下一把金鑰。
 
 ### 4. 啟動系統
 執行以下指令來啟動系統引擎：
