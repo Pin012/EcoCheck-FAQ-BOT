@@ -37,6 +37,13 @@ interface DocumentRecord {
   source: 'upload' | 'local';
 }
 
+interface AssistantPayload {
+  answer: string;
+  relatedQuestions: string[];
+  needsClarification: boolean;
+  clarificationQuestion: string;
+}
+
 function getDb(): DocumentRecord[] {
   if (fs.existsSync(DB_FILE)) {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
@@ -228,6 +235,27 @@ ${item.text}
   return context || 'No relevant context found in uploaded documents.';
 }
 
+function isQueryRelevantToDocuments(records: DocumentRecord[], userQuery: string): boolean {
+  const queryTokens = userQuery
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+
+  if (queryTokens.length === 0) return false;
+
+  for (const rec of records) {
+    const textLower = rec.text.toLowerCase();
+    let hit = 0;
+    for (const token of queryTokens) {
+      if (textLower.includes(token)) hit += 1;
+      if (hit >= 2) return true;
+    }
+  }
+
+  return false;
+}
+
 function parseRetryDelayMs(error: any): number | null {
   const detailList = Array.isArray(error?.details) ? error.details : [];
   const retryInfo = detailList.find((d: any) => d?.['@type']?.includes('RetryInfo'));
@@ -249,6 +277,41 @@ function isQuotaError(error: any): boolean {
   const statusText = typeof error?.status === 'string' ? error.status : String(error?.status ?? '');
   const messageText = typeof error?.message === 'string' ? error.message : String(error?.message ?? '');
   return statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.toLowerCase().includes('quota');
+}
+
+function parseAssistantPayload(rawText: string): AssistantPayload {
+  const text = (rawText || '').trim();
+  let answer = text;
+  let relatedQuestions: string[] = [];
+  let needsClarification = false;
+  let clarificationQuestion = '';
+
+  const answerMatch = text.match(/\[回答\]([\s\S]*?)(?:\n\[相關問題\]|\n\[需補充\]|\n\[反問\]|$)/);
+  if (answerMatch?.[1]) {
+    answer = answerMatch[1].trim();
+  }
+
+  const relatedMatch = text.match(/\[相關問題\]([\s\S]*?)(?:\n\[需補充\]|\n\[反問\]|$)/);
+  if (relatedMatch?.[1]) {
+    relatedQuestions = relatedMatch[1]
+      .split('\n')
+      .map((line) => line.replace(/^\s*(?:\d+[\).、]|[-*])\s*/, '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  const needsMatch = text.match(/\[需補充\]([\s\S]*?)(?:\n\[反問\]|$)/);
+  if (needsMatch?.[1]) {
+    const normalized = needsMatch[1].trim();
+    needsClarification = ['是', 'yes', 'true', '需要'].some((key) => normalized.toLowerCase().includes(key));
+  }
+
+  const clarifyMatch = text.match(/\[反問\]([\s\S]*?)$/);
+  if (clarifyMatch?.[1]) {
+    clarificationQuestion = clarifyMatch[1].trim();
+  }
+
+  return { answer, relatedQuestions, needsClarification, clarificationQuestion };
 }
 
 async function startServer() {
@@ -358,11 +421,14 @@ async function startServer() {
 
     // Build bounded context to prevent token overflow and API failures on large documents.
     const contextText = buildContextText(db, userQuery);
+    const isRelevant = isQueryRelevantToDocuments(db, userQuery);
     
     const systemInstruction = `
 你是一位專業的生態檢核顧問，必須先彙整「內部上傳文件」內容再回答。
 你會收到多份文件擷取內容，回答時僅可依據這些內容，禁止臆測或補充文件外資訊。
-若資料不足，請明確回覆：「經檢視目前已上傳之內部資料，尚不足以提供完整研判。建議補充相關文件或背景資訊後，我們將為您進一步彙整與說明。」
+若資料不足，請明確回覆：「經檢視目前已上傳之內部資料，尚不足以提供完整研判。建議補充相關文件或背景資訊後，我們將為您進一步彙整與說明。本FAQ系統僅回答生態檢核相關問題，若您願意，我可協助您改寫為生態檢核情境的提問。」
+若使用者問題與文件主題不相關（目前主題為生態檢核），[相關問題] 請改提供 3 題「生態檢核主題導向」問題，不必貼近原始問題。
+若使用者問題可在文件找到解答，則 [相關問題] 才提供與該題延伸的 3 題問題。
 
 回覆格式規則：
 1) 開頭需標示引用文件名稱，例如：「依據《文件名稱》，......」；若有多份可寫「依據《A》與《B》，......」。
@@ -370,10 +436,24 @@ async function startServer() {
 3) 回答控制在 120 字內。
 4) 必要時可用最多 4 點條列。
 5) 語氣自然、專業、精簡明確，避免冗長。
+6) 嚴格使用以下區塊輸出，且每個區塊都要有：
+[回答]
+（主要回答）
+[相關問題]
+1.（延伸問題1）
+2.（延伸問題2）
+3.（延伸問題3）
+[需補充]
+（是 或 否）
+[反問]
+（若「需補充」為是，請給 1 句具體反問；若否，填「無」）
 
 <Context>
 ${contextText}
 </Context>
+<IsRelevantToDocumentTopic>
+${isRelevant ? 'yes' : 'no'}
+</IsRelevantToDocumentTopic>
     `;
 
     try {
@@ -393,7 +473,8 @@ ${contextText}
               }
             });
 
-            return res.json({ response: response.text });
+            const payload = parseAssistantPayload(response.text || '');
+            return res.json(payload);
           } catch (error: any) {
             lastError = error;
             if (!isQuotaError(error)) {
