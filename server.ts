@@ -279,6 +279,29 @@ function isQuotaError(error: any): boolean {
   return statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.toLowerCase().includes('quota');
 }
 
+function isTransientGeminiError(error: any): boolean {
+  const statusText = typeof error?.status === 'string' ? error.status : String(error?.status ?? '');
+  const messageText = typeof error?.message === 'string' ? error.message : String(error?.message ?? '');
+  return (
+    statusText.includes('UNAVAILABLE') ||
+    messageText.includes('"code":503') ||
+    messageText.toLowerCase().includes('high demand')
+  );
+}
+
+function buildRetrySuggestion(error: any): string {
+  const retryDelayMs = parseRetryDelayMs(error);
+  if (retryDelayMs && retryDelayMs > 0) {
+    const totalSeconds = Math.ceil(retryDelayMs / 1000);
+    if (totalSeconds < 60) {
+      return `約 ${totalSeconds} 秒後`;
+    }
+    const minutes = Math.ceil(totalSeconds / 60);
+    return `約 ${minutes} 分鐘後`;
+  }
+  return '約 2 分鐘後';
+}
+
 function parseAssistantPayload(rawText: string): AssistantPayload {
   const text = (rawText || '').trim();
   let answer = text;
@@ -477,7 +500,7 @@ ${isRelevant ? 'yes' : 'no'}
             return res.json(payload);
           } catch (error: any) {
             lastError = error;
-            if (!isQuotaError(error)) {
+            if (!isQuotaError(error) && !isTransientGeminiError(error)) {
               throw error;
             }
 
@@ -485,6 +508,8 @@ ${isRelevant ? 'yes' : 'no'}
             if (retryDelayMs && retryDelayMs <= 60000) {
               console.warn(`API key (尾碼:${apiKey.slice(-4)}) model ${modelName} quota exhausted. Retry after ${retryDelayMs}ms.`);
               await sleep(retryDelayMs);
+            } else if (isTransientGeminiError(error)) {
+              console.warn(`API key (尾碼:${apiKey.slice(-4)}) model ${modelName} 暫時不可用，改試下一組金鑰/模型。`);
             }
           }
         }
@@ -502,6 +527,12 @@ ${isRelevant ? 'yes' : 'no'}
       const upstreamMessage = error?.message || '未知錯誤';
       if (isQuotaError(error)) {
         return res.status(429).json({ error: `Gemini 額度不足或暫時超限，請稍後重試，或在 Google AI Studio 提升配額/改用可用模型。上游訊息: ${upstreamMessage}` });
+      }
+      if (isTransientGeminiError(error)) {
+        const retrySuggestion = buildRetrySuggestion(error);
+        return res.status(503).json({
+          error: `目前 AI 服務請求量較高，系統暫時無法完成回覆。建議您 ${retrySuggestion} 再試一次；若仍發生相同情況，請稍候後重新送出問題。`
+        });
       }
       res.status(500).json({ error: `Gemini API 錯誤: ${upstreamMessage}` });
     }
