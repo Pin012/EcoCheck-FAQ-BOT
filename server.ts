@@ -235,6 +235,27 @@ ${item.text}
   return context || 'No relevant context found in uploaded documents.';
 }
 
+function isQueryRelevantToDocuments(records: DocumentRecord[], userQuery: string): boolean {
+  const queryTokens = userQuery
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+
+  if (queryTokens.length === 0) return false;
+
+  for (const rec of records) {
+    const textLower = rec.text.toLowerCase();
+    let hit = 0;
+    for (const token of queryTokens) {
+      if (textLower.includes(token)) hit += 1;
+      if (hit >= 2) return true;
+    }
+  }
+
+  return false;
+}
+
 function parseRetryDelayMs(error: any): number | null {
   const detailList = Array.isArray(error?.details) ? error.details : [];
   const retryInfo = detailList.find((d: any) => d?.['@type']?.includes('RetryInfo'));
@@ -400,11 +421,14 @@ async function startServer() {
 
     // Build bounded context to prevent token overflow and API failures on large documents.
     const contextText = buildContextText(db, userQuery);
+    const isRelevant = isQueryRelevantToDocuments(db, userQuery);
     
     const systemInstruction = `
 你是一位專業的生態檢核顧問，必須先彙整「內部上傳文件」內容再回答。
 你會收到多份文件擷取內容，回答時僅可依據這些內容，禁止臆測或補充文件外資訊。
-若資料不足，請明確回覆：「經檢視目前已上傳之內部資料，尚不足以提供完整研判。建議補充相關文件或背景資訊後，我們將為您進一步彙整與說明。」
+若資料不足，請明確回覆：「經檢視目前已上傳之內部資料，尚不足以提供完整研判。建議補充相關文件或背景資訊後，我們將為您進一步彙整與說明。本FAQ系統僅回答生態檢核相關問題，若您願意，我可協助您改寫為生態檢核情境的提問。」
+若使用者問題與文件主題不相關（目前主題為生態檢核），[相關問題] 請改提供 3 題「生態檢核主題導向」問題，不必貼近原始問題。
+若使用者問題可在文件找到解答，則 [相關問題] 才提供與該題延伸的 3 題問題。
 
 回覆格式規則：
 1) 開頭需標示引用文件名稱，例如：「依據《文件名稱》，......」；若有多份可寫「依據《A》與《B》，......」。
@@ -427,6 +451,9 @@ async function startServer() {
 <Context>
 ${contextText}
 </Context>
+<IsRelevantToDocumentTopic>
+${isRelevant ? 'yes' : 'no'}
+</IsRelevantToDocumentTopic>
     `;
 
     try {
