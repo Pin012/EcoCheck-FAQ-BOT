@@ -12,6 +12,8 @@ export function cn(...inputs: ClassValue[]) {
 interface Message {
   role: 'user' | 'model';
   parts: { text: string }[];
+  relatedQuestions?: string[];
+  clarificationQuestion?: string;
 }
 
 interface DocumentInfo {
@@ -222,7 +224,18 @@ function ChatView() {
       const data = await res.json();
 
       if (res.ok) {
-        setMessages(prev => [...prev, { role: 'model', parts: [{ text: data.response }] }]);
+        const modelText = typeof data.answer === 'string' ? data.answer : data.response;
+        const relatedQuestions = Array.isArray(data.relatedQuestions) ? data.relatedQuestions : [];
+        const clarificationQuestion = data.needsClarification ? (data.clarificationQuestion || '') : '';
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'model',
+            parts: [{ text: modelText }],
+            relatedQuestions,
+            clarificationQuestion
+          }
+        ]);
       } else {
         setMessages(prev => [...prev, { role: 'model', parts: [{ text: `系統錯誤: ${data.error}` }] }]);
       }
@@ -259,6 +272,27 @@ function ChatView() {
                 >
                   {m.role === 'model' ? renderBasicMarkdown(m.parts[0].text) : m.parts[0].text}
                 </div>
+
+                {m.role === 'model' && Array.isArray(m.relatedQuestions) && m.relatedQuestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {m.relatedQuestions.map((question, qIndex) => (
+                      <button
+                        key={`${idx}-rq-${qIndex}`}
+                        type="button"
+                        onClick={() => setInput(question)}
+                        className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs text-emerald-800 hover:bg-emerald-100"
+                      >
+                        {question}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {m.role === 'model' && m.clarificationQuestion && m.clarificationQuestion !== '無' && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    需補充確認：{m.clarificationQuestion}
+                  </div>
+                )}
 
                 {m.role === 'model' && (
                   <button
