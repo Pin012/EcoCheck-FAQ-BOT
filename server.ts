@@ -312,6 +312,13 @@ function parseAssistantPayload(rawText: string): AssistantPayload {
   const answerMatch = text.match(/\[回答\]([\s\S]*?)(?:\n\[相關問題\]|\n\[需補充\]|\n\[反問\]|$)/);
   if (answerMatch?.[1]) {
     answer = answerMatch[1].trim();
+  } else {
+    answer = text
+      .replace(/\[相關問題\][\s\S]*?(?=\n\[需補充\]|\n\[反問\]|$)/g, '')
+      .replace(/\[需補充\][\s\S]*?(?=\n\[反問\]|$)/g, '')
+      .replace(/\[反問\][\s\S]*$/g, '')
+      .replace(/\[回答\]/g, '')
+      .trim();
   }
 
   const relatedMatch = text.match(/\[相關問題\]([\s\S]*?)(?:\n\[需補充\]|\n\[反問\]|$)/);
@@ -332,6 +339,10 @@ function parseAssistantPayload(rawText: string): AssistantPayload {
   const clarifyMatch = text.match(/\[反問\]([\s\S]*?)$/);
   if (clarifyMatch?.[1]) {
     clarificationQuestion = clarifyMatch[1].trim();
+  }
+
+  if (!answer) {
+    answer = '經檢視目前回覆格式異常，請稍後再試一次。';
   }
 
   return { answer, relatedQuestions, needsClarification, clarificationQuestion };
