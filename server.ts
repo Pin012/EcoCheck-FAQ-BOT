@@ -37,6 +37,13 @@ interface DocumentRecord {
   source: 'upload' | 'local';
 }
 
+interface AssistantPayload {
+  answer: string;
+  relatedQuestions: string[];
+  needsClarification: boolean;
+  clarificationQuestion: string;
+}
+
 function getDb(): DocumentRecord[] {
   if (fs.existsSync(DB_FILE)) {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
@@ -251,6 +258,41 @@ function isQuotaError(error: any): boolean {
   return statusText.includes('RESOURCE_EXHAUSTED') || messageText.includes('"code":429') || messageText.toLowerCase().includes('quota');
 }
 
+function parseAssistantPayload(rawText: string): AssistantPayload {
+  const text = (rawText || '').trim();
+  let answer = text;
+  let relatedQuestions: string[] = [];
+  let needsClarification = false;
+  let clarificationQuestion = '';
+
+  const answerMatch = text.match(/\[回答\]([\s\S]*?)(?:\n\[相關問題\]|\n\[需補充\]|\n\[反問\]|$)/);
+  if (answerMatch?.[1]) {
+    answer = answerMatch[1].trim();
+  }
+
+  const relatedMatch = text.match(/\[相關問題\]([\s\S]*?)(?:\n\[需補充\]|\n\[反問\]|$)/);
+  if (relatedMatch?.[1]) {
+    relatedQuestions = relatedMatch[1]
+      .split('\n')
+      .map((line) => line.replace(/^\s*(?:\d+[\).、]|[-*])\s*/, '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  const needsMatch = text.match(/\[需補充\]([\s\S]*?)(?:\n\[反問\]|$)/);
+  if (needsMatch?.[1]) {
+    const normalized = needsMatch[1].trim();
+    needsClarification = ['是', 'yes', 'true', '需要'].some((key) => normalized.toLowerCase().includes(key));
+  }
+
+  const clarifyMatch = text.match(/\[反問\]([\s\S]*?)$/);
+  if (clarifyMatch?.[1]) {
+    clarificationQuestion = clarifyMatch[1].trim();
+  }
+
+  return { answer, relatedQuestions, needsClarification, clarificationQuestion };
+}
+
 async function startServer() {
   await syncLocalDocumentsToDb();
 
@@ -370,6 +412,17 @@ async function startServer() {
 3) 回答控制在 120 字內。
 4) 必要時可用最多 4 點條列。
 5) 語氣自然、專業、精簡明確，避免冗長。
+6) 嚴格使用以下區塊輸出，且每個區塊都要有：
+[回答]
+（主要回答）
+[相關問題]
+1.（延伸問題1）
+2.（延伸問題2）
+3.（延伸問題3）
+[需補充]
+（是 或 否）
+[反問]
+（若「需補充」為是，請給 1 句具體反問；若否，填「無」）
 
 <Context>
 ${contextText}
@@ -393,7 +446,8 @@ ${contextText}
               }
             });
 
-            return res.json({ response: response.text });
+            const payload = parseAssistantPayload(response.text || '');
+            return res.json(payload);
           } catch (error: any) {
             lastError = error;
             if (!isQuotaError(error)) {
