@@ -9,12 +9,14 @@
     <title>生態檢核FAQ系統 Ecocheck Bot</title>
     <style>
       :root {
-        color-scheme: light;
+        color-scheme: dark;
         --brand: #16a34a;
-        --surface: #0f172a;
-        --line: #1e293b;
-        --text-main: #e2e8f0;
-        --text-sub: #94a3b8;
+        --surface: #047857;
+        --surface-deep: #064e3b;
+        --glass: rgba(255, 255, 255, 0.08);
+        --glass-line: rgba(255, 255, 255, 0.14);
+        --text-main: rgba(241, 245, 249, 0.96);
+        --text-sub: rgba(203, 213, 225, 0.72);
       }
 
       * { box-sizing: border-box; }
@@ -22,93 +24,116 @@
       body {
         margin: 0;
         font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
-        background: radial-gradient(circle at top, #1e293b 0%, var(--surface) 55%, #020617 100%);
+        background: var(--surface-deep);
       }
 
       #boot-screen {
         position: fixed;
         inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
         padding: 24px;
         z-index: 9999;
-        background: radial-gradient(circle at 20% 20%, rgba(22, 163, 74, 0.2), transparent 42%),
-                    radial-gradient(circle at 80% 70%, rgba(30, 64, 175, 0.2), transparent 45%),
-                    rgba(2, 6, 23, 0.94);
-        backdrop-filter: blur(6px);
+        background:
+          radial-gradient(circle at 50% 38%, rgba(52, 211, 153, 0.2), transparent 30%),
+          linear-gradient(145deg, #065f46 0%, #16a34a 48%, #064e3b 100%);
+      }
+
+      #boot-screen::before,
+      #boot-screen::after {
+        content: "";
+        position: absolute;
+        width: 46vmin;
+        height: 46vmin;
+        border-radius: 999px;
+        background: rgba(110, 231, 183, 0.12);
+        filter: blur(24px);
+        animation: floatGlow 5.5s ease-in-out infinite alternate;
+      }
+
+      #boot-screen::before { top: 10%; left: 12%; }
+      #boot-screen::after {
+        right: 10%;
+        bottom: 8%;
+        background: rgba(34, 197, 94, 0.12);
+        animation-delay: -2.2s;
       }
 
       .boot-panel {
-        width: min(620px, 100%);
-        border: 1px solid rgba(148, 163, 184, 0.22);
-        background: rgba(15, 23, 42, 0.82);
-        backdrop-filter: blur(14px);
-        border-radius: 20px;
-        padding: 36px 32px;
-        box-shadow: 0 24px 70px rgba(2, 6, 23, 0.55);
+        position: relative;
+        z-index: 1;
+        width: min(420px, 100%);
+        display: grid;
+        justify-items: center;
+        gap: 22px;
+        text-align: center;
       }
 
-      .boot-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+      .boot-mark {
+        width: 120px;
+        height: 120px;
+        display: grid;
+        place-items: center;
+        border-radius: 34px;
+        border: 1px solid var(--glass-line);
+        background: var(--glass);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 28px 70px rgba(2, 19, 39, 0.28);
+        backdrop-filter: blur(10px);
+      }
+
       .spinner {
-        width: 18px; height: 18px; border-radius: 999px;
-        border: 2px solid rgba(148, 163, 184, 0.35);
-        border-top-color: var(--brand);
-        animation: spin 0.9s linear infinite;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        border: 5px solid rgba(226, 232, 240, 0.3);
+        border-top-color: rgba(248, 250, 252, 0.95);
+        border-right-color: rgba(248, 250, 252, 0.85);
+        animation: spin 0.95s linear infinite;
       }
 
-      .boot-title { margin: 0; color: var(--text-main); font-size: 1.12rem; font-weight: 650; letter-spacing: .02em; }
-      .boot-desc { margin: 0 0 20px; color: var(--text-sub); font-size: 0.95rem; line-height: 1.6; }
-
-      .boot-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-      .boot-step {
-        color: #cbd5e1;
-        font-size: 0.92rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        opacity: 0.75;
-        transition: opacity 180ms ease;
+      .boot-title {
+        margin: 0;
+        color: var(--text-main);
+        font-size: clamp(2rem, 7vw, 3rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        text-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
       }
-      .boot-step.active { opacity: 1; }
-      .boot-dot { width: 6px; height: 6px; border-radius: 999px; background: #64748b; }
-      .boot-step.active .boot-dot { background: var(--brand); }
 
-      .boot-status { margin-top: 16px; color: #86efac; font-size: 0.82rem; min-height: 1.25rem; }
+      .boot-status {
+        margin: 0;
+        color: var(--text-sub);
+        min-height: 1.4rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
 
       @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes floatGlow { to { transform: translate3d(18px, -14px, 0) scale(1.06); } }
     </style>
   </head>
   <body>
     <div id="boot-screen" aria-live="polite">
-      <section class="boot-panel" role="status" aria-label="系統啟動狀態">
-        <div class="boot-head">
-          <span class="spinner" aria-hidden="true"></span>
-          <h1 class="boot-title">EcoCheck 系統服務啟動中</h1>
+      <section class="boot-panel" role="status" aria-label="系統啟動中">
+        <div class="boot-mark" aria-hidden="true">
+          <span class="spinner"></span>
         </div>
-        <p class="boot-desc">正在為您準備生態檢核作業環境，請稍候。</p>
-        <ul class="boot-steps" id="boot-steps">
-          <li class="boot-step active"><span class="boot-dot"></span>正在初始化 AI 服務</li>
-          <li class="boot-step"><span class="boot-dot"></span>正在連線知識庫</li>
-          <li class="boot-step"><span class="boot-dot"></span>正在檢查系統狀態</li>
-          <li class="boot-step"><span class="boot-dot"></span>正在載入生態檢核模組</li>
-        </ul>
-        <p class="boot-status" id="boot-status">正在建立安全連線...</p>
+        <h1 class="boot-title">EcoCheck</h1>
+        <p class="boot-status" id="boot-status">LOADING...</p>
       </section>
     </div>
 
     <div id="root"></div>
 
     <script type="module">
-      const steps = [...document.querySelectorAll('.boot-step')];
       const statusEl = document.getElementById('boot-status');
       const bootScreen = document.getElementById('boot-screen');
-      let stepIndex = 0;
-
-      const animateSteps = setInterval(() => {
-        stepIndex = (stepIndex + 1) % steps.length;
-        steps.forEach((step, idx) => step.classList.toggle('active', idx === stepIndex));
-      }, 1400);
 
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -120,22 +145,20 @@
             const response = await fetch('/health', { cache: 'no-store', signal: controller.signal });
             clearTimeout(timeout);
             if (response.ok) {
-              statusEl.textContent = '系統檢查完成，正在進入主系統...';
+              statusEl.textContent = 'ENTERING...';
               return;
             }
           } catch {}
 
-          statusEl.textContent = '系統仍在準備中，請稍候...';
+          statusEl.textContent = 'LOADING...';
           await wait(2000);
         }
 
-        statusEl.textContent = '已進入主系統，後續服務將於背景完成。';
+        statusEl.textContent = 'ENTERING...';
       }
 
       (async () => {
         await waitForApi();
-        clearInterval(animateSteps);
-
         await import('/src/main.tsx');
 
         if (bootScreen) {
