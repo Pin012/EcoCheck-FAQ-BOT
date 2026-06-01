@@ -30,7 +30,7 @@ export default function App() {
         <header className="bg-slate-900 text-slate-100 border-b border-slate-800 px-5 py-3 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
             <img src="/brand-icon.png" alt="EcoCheck 圖示" className="w-6 h-6 object-contain" />
-            <h1 className="font-semibold text-lg tracking-wide">EcoCheck FAQ Bot 生態檢核諮詢系統</h1>
+            <h1 className="font-semibold text-lg tracking-wide">EcoCheck Bot 生態檢核FAQ系統</h1>
           </div>
         </header>
 
