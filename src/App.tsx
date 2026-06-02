@@ -247,7 +247,7 @@ function ChatView() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#1B3022]">
+    <div className="flex flex-col h-full w-full bg-[#F2F5F0]">
       {/* Messages */}
       <div className="chat-scrollbar flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6">
         <div className="mx-auto w-full max-w-7xl space-y-4 md:space-y-6">
@@ -267,8 +267,8 @@ function ChatView() {
                   className={cn(
                     'px-4 py-3 rounded-xl text-sm sm:text-base leading-7',
                     m.role === 'user'
-                      ? 'bg-[#3A5A40] text-[#F2F5F0] rounded-tr-none'
-                      : 'bg-[#F2F5F0] border border-[#CCD4CD] text-[#1B3022] rounded-tl-none whitespace-pre-wrap'
+                      ? 'bg-[#A3B18A] text-[#1B3022] rounded-tr-none'
+                      : 'bg-[#CCD4CD] border border-[#A3B18A] text-[#1B3022] rounded-tl-none whitespace-pre-wrap'
                   )}
                 >
                   {m.role === 'model' ? renderBasicMarkdown(m.parts[0].text) : m.parts[0].text}
@@ -281,7 +281,7 @@ function ChatView() {
                         key={`${idx}-rq-${qIndex}`}
                         type="button"
                         onClick={() => setInput(question)}
-                        className="rounded-full border border-[#A3B18A] bg-[#F2F5F0] px-3 py-1 text-xs text-[#3A5A40] hover:bg-[#CCD4CD]"
+                        className="rounded-full border border-[#A3B18A] bg-[#F2F5F0] px-3 py-1 text-xs text-[#3A5A40] hover:border-[#3A5A40] hover:bg-[#3A5A40] hover:text-[#F2F5F0] transition-colors"
                       >
                         {question}
                       </button>
@@ -313,7 +313,7 @@ function ChatView() {
 
         {isLoading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-            <div className="px-4 py-3 rounded-xl bg-[#F2F5F0] border border-[#CCD4CD] text-[#3A5A40] flex items-center gap-2">
+            <div className="px-4 py-3 rounded-xl bg-[#CCD4CD] border border-[#A3B18A] text-[#3A5A40] flex items-center gap-2">
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce [animation-delay:0.4s]"></span>
