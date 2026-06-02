@@ -25,9 +25,9 @@ interface DocumentInfo {
 
 export default function App() {
   return (
-    <div className="flex h-screen bg-[#F2F5F0] text-[#1B3022] font-sans">
+    <div className="flex h-screen bg-[#1B3022] text-[#1B3022] font-sans">
       <div className="flex flex-col w-full h-full">
-        <header className="bg-[#1B3022] text-[#F2F5F0] border-b border-[#3A5A40] px-5 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        <header className="bg-[#1B3022] text-[#F2F5F0] border-b border-[#3A5A40] px-5 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <img src="/brand-icon.png" alt="EcoCheck 圖示" className="w-6 h-6 object-contain" />
             <h1 className="font-semibold text-lg tracking-wide">EcoCheck Bot 生態檢核FAQ系統</h1>
@@ -247,9 +247,10 @@ function ChatView() {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto w-full">
+    <div className="flex flex-col h-full w-full bg-[#1B3022]">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="chat-scrollbar flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6">
+        <div className="mx-auto w-full max-w-7xl space-y-4 md:space-y-6">
         <AnimatePresence initial={false}>
           {messages.map((m, idx) => (
             <motion.div
@@ -261,10 +262,10 @@ function ChatView() {
                 m.role === 'user' ? 'justify-end' : 'justify-start'
               )}
             >
-              <div className={cn('flex flex-col gap-2 max-w-[88%] sm:max-w-[78%]')}>
+              <div className={cn('flex flex-col gap-2 max-w-[92%] sm:max-w-[84%] lg:max-w-[78%]')}>
                 <div
                   className={cn(
-                    'px-4 py-3 rounded-xl shadow-sm text-sm sm:text-base leading-7',
+                    'px-4 py-3 rounded-xl text-sm sm:text-base leading-7',
                     m.role === 'user'
                       ? 'bg-[#3A5A40] text-[#F2F5F0] rounded-tr-none'
                       : 'bg-[#F2F5F0] border border-[#CCD4CD] text-[#1B3022] rounded-tl-none whitespace-pre-wrap'
@@ -312,7 +313,7 @@ function ChatView() {
 
         {isLoading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-            <div className="px-4 py-3 rounded-xl bg-[#F2F5F0] border border-[#CCD4CD] text-[#3A5A40] shadow-sm flex items-center gap-2">
+            <div className="px-4 py-3 rounded-xl bg-[#F2F5F0] border border-[#CCD4CD] text-[#3A5A40] flex items-center gap-2">
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce [animation-delay:0.4s]"></span>
@@ -320,13 +321,14 @@ function ChatView() {
           </motion.div>
         )}
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input */}
-      <div className="p-4 bg-[#CCD4CD] border-t border-[#A3B18A] shrink-0">
+      <div className="px-4 py-4 md:px-8 bg-[#CCD4CD] border-t border-[#A3B18A] shrink-0">
         <form
           onSubmit={handleSubmit}
-          className="relative flex items-center shadow-sm bg-[#F2F5F0] border border-[#A3B18A] rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#0B8B3D] focus-within:border-[#0B8B3D] transition-all"
+          className="relative mx-auto flex w-full max-w-7xl items-center bg-[#F2F5F0] border border-[#A3B18A] rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#0B8B3D] focus-within:border-[#0B8B3D] transition-all"
         >
           <input
             type="text"
@@ -334,17 +336,17 @@ function ChatView() {
             onChange={e => setInput(e.target.value)}
             disabled={isLoading}
             placeholder="請輸入您的問題..."
-            className="flex-1 w-full border-0 py-3 md:py-4 pl-4 pr-12 text-sm sm:text-base outline-none bg-transparent text-[#1B3022] placeholder:text-[#588157] disabled:opacity-50"
+            className="flex-1 w-full border-0 py-3 md:py-4 pl-4 pr-12 text-sm sm:text-base outline-none bg-transparent text-[#1B3022] placeholder:text-[#588157] disabled:text-[#588157]"
           />
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="absolute right-2 p-2 bg-[#0B8B3D] text-[#F2F5F0] rounded-md hover:bg-[#3A5A40] disabled:opacity-50 disabled:hover:bg-[#0B8B3D] transition-colors"
+            className="absolute right-2 p-2 bg-[#0B8B3D] text-[#F2F5F0] rounded-md hover:bg-[#3A5A40] disabled:bg-[#588157] disabled:hover:bg-[#588157] transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
         </form>
-        <p className="text-center text-xs text-[#588157] mt-2">AI 智能回覆內容僅供參考，實際規範與執行細節請依正式核定文件與專案合約為準。</p>
+        <p className="mx-auto max-w-7xl text-center text-xs text-[#588157] mt-2">AI 智能回覆內容僅供參考，實際規範與執行細節請依正式核定文件與專案合約為準。</p>
       </div>
     </div>
   );
