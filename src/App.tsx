@@ -25,7 +25,7 @@ interface DocumentInfo {
 
 export default function App() {
   return (
-    <div className="flex h-screen bg-[#F2F5F0] text-[#1B3022] font-sans">
+    <div className="flex h-screen bg-[#1B3022] text-[#1B3022] font-sans">
       <div className="flex flex-col w-full h-full">
         <header className="bg-[#1B3022] text-[#F2F5F0] border-b border-[#3A5A40] px-5 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
