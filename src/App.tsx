@@ -268,7 +268,7 @@ function ChatView() {
                     'px-4 py-3 rounded-xl text-sm sm:text-base leading-7',
                     m.role === 'user'
                       ? 'bg-[#A3B18A] text-[#1B3022] rounded-tr-none'
-                      : 'bg-[#CCD4CD] border border-[#A3B18A] text-[#1B3022] rounded-tl-none whitespace-pre-wrap'
+                      : 'bg-[#E7EBE6] border border-[#CCD4CD] text-[#1B3022] rounded-tl-none whitespace-pre-wrap'
                   )}
                 >
                   {m.role === 'model' ? renderBasicMarkdown(m.parts[0].text) : m.parts[0].text}
@@ -313,7 +313,7 @@ function ChatView() {
 
         {isLoading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-            <div className="px-4 py-3 rounded-xl bg-[#CCD4CD] border border-[#A3B18A] text-[#3A5A40] flex items-center gap-2">
+            <div className="px-4 py-3 rounded-xl bg-[#E7EBE6] border border-[#CCD4CD] text-[#3A5A40] flex items-center gap-2">
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 bg-[#A3B18A] rounded-full animate-bounce [animation-delay:0.4s]"></span>
