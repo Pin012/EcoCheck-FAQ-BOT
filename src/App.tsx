@@ -267,7 +267,7 @@ function ChatView() {
                   className={cn(
                     'px-4 py-3 rounded-xl text-sm sm:text-base leading-7',
                     m.role === 'user'
-                      ? 'bg-[#A3B18A] text-[#1B3022] rounded-tr-none'
+                      ? 'bg-[#588157] text-white rounded-tr-none'
                       : 'bg-[#E7EBE6] border border-[#CCD4CD] text-[#1B3022] rounded-tl-none whitespace-pre-wrap'
                   )}
                 >
