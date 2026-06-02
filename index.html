@@ -71,27 +71,55 @@
       }
 
       .boot-mark {
-        width: 120px;
-        height: 120px;
+        position: relative;
+        width: 128px;
+        height: 128px;
         display: grid;
         place-items: center;
-        border-radius: 34px;
-        border: 1px solid var(--glass-line);
-        background: var(--glass);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.08),
-          0 28px 70px rgba(2, 19, 39, 0.28);
-        backdrop-filter: blur(10px);
+      }
+
+      .boot-mark::before {
+        content: "";
+        position: absolute;
+        width: 104px;
+        height: 104px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(45, 212, 191, 0.22), transparent 62%);
+        animation: pulseGlow 2.2s ease-in-out infinite;
+      }
+
+      .boot-mark::after {
+        content: "";
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.95) 0 4px, rgba(134, 239, 172, 0.45) 5px, transparent 10px);
+        animation: spin 2.8s linear infinite reverse;
       }
 
       .spinner {
-        width: 48px;
-        height: 48px;
+        position: absolute;
+        z-index: 1;
+        width: 86px;
+        height: 86px;
         border-radius: 999px;
-        border: 5px solid rgba(226, 232, 240, 0.3);
-        border-top-color: rgba(248, 250, 252, 0.95);
-        border-right-color: rgba(248, 250, 252, 0.85);
-        animation: spin 0.95s linear infinite;
+        background:
+          conic-gradient(from 90deg, transparent 0 18%, rgba(134, 239, 172, 0.92) 34%, rgba(248, 250, 252, 0.96) 52%, rgba(45, 212, 191, 0.72) 72%, transparent 92%);
+        animation: spin 1.05s linear infinite;
+        filter: drop-shadow(0 0 18px rgba(45, 212, 191, 0.34));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+        mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+      }
+
+      .boot-icon {
+        position: relative;
+        z-index: 2;
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+        animation: iconFloat 2.2s ease-in-out infinite;
+        filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.28));
       }
 
       .boot-title {
@@ -115,6 +143,14 @@
       }
 
       @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes iconFloat {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-2px) scale(1.04); }
+      }
+      @keyframes pulseGlow {
+        0%, 100% { opacity: 0.45; transform: scale(0.86); }
+        50% { opacity: 0.9; transform: scale(1.08); }
+      }
       @keyframes floatGlow { to { transform: translate3d(18px, -14px, 0) scale(1.06); } }
     </style>
   </head>
@@ -123,6 +159,7 @@
       <section class="boot-panel" role="status" aria-label="系統啟動中">
         <div class="boot-mark" aria-hidden="true">
           <span class="spinner"></span>
+          <img class="boot-icon" src="/brand-icon.png" alt="" />
         </div>
         <h1 class="boot-title">EcoCheck</h1>
         <p class="boot-status" id="boot-status">LOADING...</p>
